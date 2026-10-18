@@ -11,22 +11,47 @@
 #   [ ] use an AI assistant; tag its lines honestly in the PR
 # ============================================================
 
-
 def luggage_fee(items, cabin):
-    """Return the luggage fee for `items` travelling in `cabin`.
+    """Return the luggage fee for `items` travelling in `cabin`."""
 
-    items: list of {"weight_kg": number, "medical": bool}
-    cabin: "economy" | "business" | "lunar_suite"
+    # Step 1: Define free luggage allowance for each cabin
+    free_allowance = {
+        "economy": 5,
+        "business": 10,
+        "lunar_suite": 20
+    }
 
-    Items marked "medical": true never count toward weight or fees.
+    # Step 2: Validate cabin
+    if cabin not in free_allowance:
+        raise ValueError("Invalid cabin type")
 
-    Free allowance by cabin: economy 5 kg, business 10 kg,
-    lunar_suite 20 kg, shared across all non-medical items combined.
+    # Step 3: Calculate total weight of non-medical luggage
+    total_weight = sum(
+        item["weight_kg"]
+        for item in items
+        if not item["medical"]
+    )
 
-    Weight beyond the free allowance is charged: the first 5 kg of
-    excess at Rs.900/kg, anything beyond that at Rs.1,500/kg.
+    # Step 4: Get free allowance
+    free_weight = free_allowance[cabin]
 
-    Returns {"total_weight_kg": number, "free_weight_kg": number,
-             "excess_weight_kg": number, "fee_inr": int}.
-    """
-    raise NotImplementedError("TODO(M9)")
+    # Step 5: Calculate excess weight
+    excess_weight = max(0, total_weight - free_weight)
+
+    # Step 6: Calculate fee
+    # First 5 kg of excess costs Rs. 900/kg
+    first_slab = min(excess_weight, 5)
+
+    # Remaining excess costs Rs. 1500/kg
+    second_slab = max(0, excess_weight - 5)
+
+    fee = (first_slab * 900) + (second_slab * 1500)
+
+    # Step 7: Return result
+    return {
+        "total_weight_kg": total_weight,
+        "free_weight_kg": free_weight,
+        "excess_weight_kg": excess_weight,
+        "fee_inr": int(fee)
+    }
+
