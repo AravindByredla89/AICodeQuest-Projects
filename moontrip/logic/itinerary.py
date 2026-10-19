@@ -1,35 +1,91 @@
-# ============================================================
-# TASK M8 — Itinerary validator
-# Files for this task:
-#   logic/itinerary.py          <- this file
-#   api/itinerary_routes.py
-#   web/src/tasks/ItineraryValidator.jsx
-# TODO(M8):
-#   [ ] implement validate_itinerary() in this file
-#   [ ] implement the POST /api/itinerary/validate route
-#   [ ] build the itinerary builder listing validation errors
-#   [ ] use an AI assistant; tag its lines honestly in the PR
-# ============================================================
+
+from collections import Counter, defaultdict
+
+
+def _is_outside_trip(date, trip_start, trip_end):
+    """Return whether an activity date falls outside the trip dates."""
+    return date < trip_start or date > trip_end
+
+
+def _activities_overlap(first, second):
+    """Check whether two half-open time ranges overlap."""
+    return (
+        first["start_hour"] < second["end_hour"]
+        and second["start_hour"] < first["end_hour"]
+    )
+
+
+def _find_overlaps(activities):
+    """Return overlap errors in activity-pair order."""
+    errors = []
+
+    for i, first in enumerate(activities):
+        for second in activities[i + 1:]:
+            if (
+                first["date"] == second["date"]
+                and _activities_overlap(first, second)
+            ):
+                errors.append(
+                    f'{first["type"]} overlaps with '
+                    f'{second["type"]} on {first["date"]}'
+                )
+
+    return errors
+
+
+def _find_excess_moonwalks(activities):
+    """Return one error per date with more than two moonwalks."""
+    moonwalk_counts = Counter(
+        activity["date"]
+        for activity in activities
+        if activity["type"] == "eva"
+    )
+
+    # Preserve the order in which qualifying dates first appear.
+    reported_dates = set()
+    errors = []
+
+    for activity in activities:
+        date = activity["date"]
+
+        if (
+            moonwalk_counts[date] > 2
+            and date not in reported_dates
+        ):
+            errors.append(f"more than 2 moonwalks on {date}")
+            reported_dates.add(date)
+
+    return errors
 
 
 def validate_itinerary(activities, trip_start, trip_end):
     """Validate a list of planned trip activities.
 
-    activities: list of {"type": str, "date": "YYYY-MM-DD",
-                          "start_hour": number, "end_hour": number}
-                (start_hour/end_hour are hours-of-day, 0-24)
-    trip_start: "YYYY-MM-DD"
-    trip_end: "YYYY-MM-DD"
+    Args:
+        activities: List of dictionaries containing type, date,
+            start_hour, and end_hour.
+        trip_start: Inclusive trip start date (YYYY-MM-DD).
+        trip_end: Inclusive trip end date (YYYY-MM-DD).
 
-    Checks, in this order, adding one message per violation found:
-    - an activity whose date is before trip_start or after trip_end
-      ("activity on {date} is outside the trip dates")
-    - two activities on the same date whose [start_hour, end_hour)
-      ranges overlap ("{type} overlaps with {type} on {date}")
-    - more than 2 activities of type "eva" (moonwalks) on the same date
-      ("more than 2 moonwalks on {date}")
-
-    Returns an ordered list of message strings (empty list if the
-    itinerary is valid).
+    Returns:
+        An ordered list of validation error messages. Returns an
+        empty list when the itinerary passes all specified checks.
     """
-    raise NotImplementedError("TODO(M8)")
+    errors = []
+
+    # 1. Activities outside the trip dates.
+    for activity in activities:
+        date = activity["date"]
+
+        if _is_outside_trip(date, trip_start, trip_end):
+            errors.append(
+                f"activity on {date} is outside the trip dates"
+            )
+
+    # 2. Overlapping activities on the same date.
+    errors.extend(_find_overlaps(activities))
+
+    # 3. More than two moonwalks on the same date.
+    errors.extend(_find_excess_moonwalks(activities))
+
+    return errors
