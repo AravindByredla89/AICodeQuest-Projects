@@ -14,7 +14,6 @@ int randomGenerator(int n){
 
 
 
-// a comment to fill this with the next upcoming algorithmsd 
 
 
 
@@ -27,6 +26,46 @@ int randomGenerator(int n){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// this is the new random
 
 
 
